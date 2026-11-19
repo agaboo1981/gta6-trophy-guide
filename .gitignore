@@ -1,5 +1,40 @@
-node_modules/
+# Secrets and local environment
 .env
-*.pem
-.DS_Store
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build and local output
+out/
+output/
 /output/
+build/
+dist/
+
+# Temporary artifacts
+tmp/
+/tmp/
+*.tmp
+*.temp
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Local caches
+.cache/
+*.tsbuildinfo
+
+# The entry's own files stay tracked
+!app/
+!app/**
+!screenshots/
+!screenshots/**

@@ -3,23 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GTA VI trophy checklist</title>
+<title>Vice Platinum Codex - GTA VI PS5 trophy guide &amp; tracker</title>
+<meta name="description" content="An offline, fan-made GTA VI PlayStation 5 trophy guide and tracker: all 55 trophies, a platinum roadmap, missable warnings, per-step citations and saved progress.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>GTA VI trophy checklist</h1>
-  <p id="progress">0 of 55 earned</p>
-</header>
-<div class="controls">
-  <label>Grade <select id="grade"><option value="all">All</option><option value="platinum">Platinum</option><option value="gold">Gold</option><option value="silver">Silver</option><option value="bronze">Bronze</option></select></label>
-  <button id="export" type="button">Export progress</button>
-  <label class="import">Import progress <input id="import" type="file" accept="application/json"></label>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">VP</span>
+      <div class="brandtext">
+        <h1>Vice Platinum Codex</h1>
+        <p class="tagline">An offline GTA&nbsp;VI PS5 trophy ledger, roadmap &amp; tracker</p>
+      </div>
+    </div>
+    <div class="scoreboard">
+      <div class="progress">
+        <div class="progress-num"><span id="progress">0 / 55</span> <span id="progressPct" class="muted">0%</span></div>
+        <div class="progress-bar"><span id="progressfill"></span></div>
+        <div class="saved" id="saved">Saved in this browser</div>
+      </div>
+      <div class="gradecounts" id="gradecounts"></div>
+    </div>
+  </header>
+
+  <nav class="toolbar">
+    <div class="tabs" role="tablist">
+      <button type="button" data-view="checklist" class="tab active" role="tab">Checklist</button>
+      <button type="button" data-view="roadmap" class="tab" role="tab">Roadmap</button>
+      <button type="button" data-view="sources" class="tab" role="tab">Sources</button>
+    </div>
+    <div class="controls">
+      <label class="toggle" title="Hide unearned story names and guides">
+        <input id="spoiler" type="checkbox"> Spoiler shield
+      </label>
+      <button id="export" type="button" class="btn">Export</button>
+      <label class="import btn">Import<input id="import" type="file" accept="application/json"></label>
+    </div>
+  </nav>
+
+  <div class="audit" id="audit"></div>
+
+  <main>
+    <section id="checklist" class="view active" role="tabpanel">
+      <aside class="pane pane-list">
+        <div class="chips" id="kindchips"></div>
+        <div class="subfilters">
+          <label class="sel">Grade
+            <select id="grade">
+              <option value="all">All grades</option>
+              <option value="platinum">Platinum</option>
+              <option value="gold">Gold</option>
+              <option value="silver">Silver</option>
+              <option value="bronze">Bronze</option>
+            </select>
+          </label>
+          <span class="filter-note" id="listcount"></span>
+        </div>
+        <div class="trophy-list" id="rows"></div>
+      </aside>
+      <section class="pane pane-detail" id="detail" aria-live="polite"></section>
+      <aside class="pane pane-sources" id="sourcerail"></aside>
+    </section>
+
+    <section id="roadmap" class="view" role="tabpanel">
+      <div class="roadmap-wrap" id="roadmap-content"></div>
+    </section>
+
+    <section id="sources" class="view" role="tabpanel">
+      <div class="sources-wrap" id="sources-content"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Unofficial fan-made guide. Not affiliated with Rockstar Games or PlayStation. Offline: nothing is loaded over the network.
+  </footer>
 </div>
-<table>
-  <thead><tr><th>Earned</th><th>Trophy</th><th>Grade</th><th>How to get it</th></tr></thead>
-  <tbody id="rows"></tbody>
-</table>
 <script type="module" src="app.js"></script>
 </body>
 </html>
