@@ -1,4 +1,13 @@
-import { cpSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath as toPath } from 'node:url';
 import {
@@ -60,6 +69,21 @@ function isRecord(value) {
 function inside(child, parent) {
   const rel = relative(parent, child);
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+function makeWritable(root) {
+  let st;
+  try {
+    st = lstatSync(root);
+  } catch {
+    return;
+  }
+  if (st.isDirectory()) {
+    chmodSync(root, (st.mode & 0o777) | 0o700);
+    for (const name of readdirSync(root)) makeWritable(join(root, name));
+  } else if (st.isFile()) {
+    chmodSync(root, (st.mode & 0o777) | 0o200);
+  }
 }
 
 function walkPlain(base, label, issues) {
@@ -405,10 +429,13 @@ if (inside(destination, join(repo, 'app')) || inside(destination, join(repo, 'sc
 const source = audit(repo);
 abort(source.issues);
 
+makeWritable(destination);
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });
 cpSync(join(repo, 'app'), join(destination, 'app'), { recursive: true, dereference: false });
 cpSync(join(repo, 'screenshots'), join(destination, 'screenshots'), { recursive: true, dereference: false });
+makeWritable(join(destination, 'app'));
+makeWritable(join(destination, 'screenshots'));
 
 const copied = audit(destination);
 abort(copied.issues);
