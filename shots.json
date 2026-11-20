@@ -1,6 +1,6 @@
 [
-  { "file": "1-checklist.jpg", "path": "/?t=22", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "2-roadmap.jpg", "path": "/?view=roadmap", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "3-silver-guide.jpg", "path": "/?view=checklist&t=17", "viewport": { "width": 1280, "height": 800 } },
-  { "file": "4-bronze-guide.jpg", "path": "/?view=sources", "viewport": { "width": 1280, "height": 800 } }
+  { "file": "1-chart-cover.jpg", "path": "/?view=checklist&t=28&demo=11&spoiler=0", "viewport": { "width": 1280, "height": 480 } },
+  { "file": "2-tracker-spoiler.jpg", "path": "/?view=checklist&kind=story&spoiler=1&t=7", "seed": [2,16,20,21,28,30,31,14,15,17,18,19,29,32,33,34,35,36,37,38,39,40], "viewport": { "width": 1280, "height": 480 } },
+  { "file": "3-roadmap-tide-table.jpg", "path": "/?view=roadmap&demo=11&spoiler=0", "viewport": { "width": 1280, "height": 480 } },
+  { "file": "4-guide-sources.jpg", "path": "/?view=guide&t=28&demo=11&spoiler=0", "viewport": { "width": 1280, "height": 480 } }
 ]

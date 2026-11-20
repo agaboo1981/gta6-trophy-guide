@@ -3,82 +3,145 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vice Platinum Codex - GTA VI PS5 trophy guide &amp; tracker</title>
-<meta name="description" content="An offline, fan-made GTA VI PlayStation 5 trophy guide and tracker: all 55 trophies, a platinum roadmap, missable warnings, per-step citations and saved progress.">
+<title>TIDELINE 55 — GTA VI PS5 trophy chart &amp; logbook</title>
+<meta name="description" content="An offline, fan-made GTA VI PlayStation 5 trophy guide and tracker: all 55 official trophies, a nine-lane platinum roadmap, coral missable flags, per-step citations and saved progress.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to the chart</a>
+
 <div class="app">
-  <header class="topbar">
+  <header class="masthead">
     <div class="brand">
-      <span class="logo" aria-hidden="true">VP</span>
-      <div class="brandtext">
-        <h1>Vice Platinum Codex</h1>
-        <p class="tagline">An offline GTA&nbsp;VI PS5 trophy ledger, roadmap &amp; tracker</p>
-      </div>
+      <p class="brand-kicker">GTA VI · PlayStation 5 · offline survey chart</p>
+      <h1 class="wordmark"><span class="wordmark-tide">TIDELINE</span><span class="wordmark-num">55</span></h1>
+      <p class="brand-sub">All 55 trophies, nine lanes, one honest pass.</p>
     </div>
     <div class="scoreboard">
-      <div class="progress">
-        <div class="progress-num"><span id="progress">0 / 55</span> <span id="progressPct" class="muted">0%</span></div>
-        <div class="progress-bar"><span id="progressfill"></span></div>
-        <div class="saved" id="saved">Saved in this browser</div>
+      <div class="progress-big" aria-live="polite">
+        <span id="progress">0 / 55</span>
+        <span class="progress-unit">earned</span>
       </div>
-      <div class="gradecounts" id="gradecounts"></div>
+      <div class="grade-split" id="gradecounts" aria-label="Grade split"></div>
+      <div class="save-state" id="saved" role="status" aria-live="polite">Saved in this browser</div>
+    </div>
+    <div class="sounder-wrap">
+      <div class="sounder" id="sounder" aria-label="55-tick progress sounder"></div>
+      <div class="sounder-key" aria-hidden="true">
+        <span class="key-earned">earned</span>
+        <span class="key-missable">missable</span>
+        <span class="key-hidden">hidden</span>
+      </div>
     </div>
   </header>
 
-  <nav class="toolbar">
-    <div class="tabs" role="tablist">
-      <button type="button" data-view="checklist" class="tab active" role="tab">Checklist</button>
-      <button type="button" data-view="roadmap" class="tab" role="tab">Roadmap</button>
-      <button type="button" data-view="sources" class="tab" role="tab">Sources</button>
-    </div>
+  <div class="toolbar">
+    <nav class="tabs" role="tablist" aria-label="Guide views">
+      <button type="button" class="tab" role="tab" id="tab-checklist" aria-controls="view-checklist" aria-selected="true" data-view="checklist">Checklist</button>
+      <button type="button" class="tab" role="tab" id="tab-roadmap" aria-controls="view-roadmap" aria-selected="false" tabindex="-1" data-view="roadmap">Roadmap</button>
+      <button type="button" class="tab" role="tab" id="tab-sources" aria-controls="view-sources" aria-selected="false" tabindex="-1" data-view="sources">Sources</button>
+      <button type="button" class="tab" role="tab" id="tab-guide" aria-controls="view-guide" aria-selected="false" tabindex="-1" data-view="guide">Guide</button>
+    </nav>
     <div class="controls">
-      <label class="toggle" title="Hide unearned story names and guides">
-        <input id="spoiler" type="checkbox"> Spoiler shield
+      <label class="search-box" for="search">
+        <span class="control-label">Search</span>
+        <input id="search" type="search" placeholder="name, mission, count" autocomplete="off">
       </label>
-      <button id="export" type="button" class="btn">Export</button>
-      <label class="import btn">Import<input id="import" type="file" accept="application/json"></label>
+      <label class="grade-box" for="grade">
+        <span class="control-label">Grade</span>
+        <select id="grade">
+          <option value="all">All</option>
+          <option value="platinum">Platinum</option>
+          <option value="gold">Gold</option>
+          <option value="silver">Silver</option>
+          <option value="bronze">Bronze</option>
+        </select>
+      </label>
+      <button type="button" id="spoilerToggle" class="control shield" aria-pressed="false" aria-describedby="spoilerHelp">
+        <span class="shield-label">Spoiler shield</span>
+        <strong id="spoilerState">OFF</strong>
+      </button>
+      <p id="spoilerHelp" class="visually-hidden">When on, unearned story trophy names and descriptions are hidden until earned.</p>
+      <button type="button" id="exportBtn" class="control">Export</button>
+      <label class="control import-control" for="importFile">
+        <span>Import</span>
+        <input id="importFile" type="file" accept="application/json,.json">
+      </label>
+      <button type="button" id="resetBtn" class="control control-quiet">Reset</button>
     </div>
-  </nav>
+  </div>
 
-  <div class="audit" id="audit"></div>
+  <div class="evidence" id="evidence-strip" aria-label="Evidence summary"></div>
 
-  <main>
-    <section id="checklist" class="view active" role="tabpanel">
-      <aside class="pane pane-list">
-        <div class="chips" id="kindchips"></div>
-        <div class="subfilters">
-          <label class="sel">Grade
-            <select id="grade">
-              <option value="all">All grades</option>
-              <option value="platinum">Platinum</option>
-              <option value="gold">Gold</option>
-              <option value="silver">Silver</option>
-              <option value="bronze">Bronze</option>
-            </select>
-          </label>
-          <span class="filter-note" id="listcount"></span>
+  <main id="main">
+    <section id="view-checklist" class="view view-checklist" role="tabpanel" aria-labelledby="tab-checklist">
+      <aside class="pane pane-index" aria-label="Trophy index">
+        <div class="index-head">
+          <div class="kind-chips" id="kindchips" role="group" aria-label="Filter trophies by kind"></div>
+          <div class="list-meta">
+            <span id="listcount" class="list-count"></span>
+            <span id="nextup" class="next-up"></span>
+          </div>
+          <p id="shieldbanner" class="shield-banner" hidden></p>
         </div>
-        <div class="trophy-list" id="rows"></div>
+        <ul id="rows" class="trophy-list" aria-label="Trophies"></ul>
       </aside>
-      <section class="pane pane-detail" id="detail" aria-live="polite"></section>
-      <aside class="pane pane-sources" id="sourcerail"></aside>
+      <section class="pane pane-guide" id="detail" aria-live="polite" aria-label="Selected trophy guide"></section>
+      <aside class="pane pane-sources" id="sourcerail" aria-label="Source ledger"></aside>
     </section>
 
-    <section id="roadmap" class="view" role="tabpanel">
-      <div class="roadmap-wrap" id="roadmap-content"></div>
+    <section id="view-roadmap" class="view view-roadmap" role="tabpanel" aria-labelledby="tab-roadmap">
+      <div class="roadmap-main">
+        <div class="roadmap-head">
+          <h2 class="section-title">Tide table</h2>
+          <p class="section-sub">Eight stages plus the platinum. Order, reason and save buoy are derived from the official descriptions and cited method notes.</p>
+        </div>
+        <div id="tide-table" class="tide-table" aria-label="Nine-lane platinum roadmap"></div>
+      </div>
+      <aside id="missable-flags" class="missable-panel" aria-label="Missable watch"></aside>
     </section>
 
-    <section id="sources" class="view" role="tabpanel">
-      <div class="sources-wrap" id="sources-content"></div>
+    <section id="view-sources" class="view view-sources" role="tabpanel" aria-labelledby="tab-sources">
+      <div id="source-ledger" class="source-ledger"></div>
+    </section>
+
+    <section id="view-guide" class="view view-guide" role="tabpanel" aria-labelledby="tab-guide">
+      <div id="guide-spread" class="guide-spread"></div>
     </section>
   </main>
 
   <footer class="foot">
-    Unofficial fan-made guide. Not affiliated with Rockstar Games or PlayStation. Offline: nothing is loaded over the network.
+    Unofficial fan-made guide. Not affiliated with Rockstar Games or PlayStation. No official logo, artwork or copied guide text. The app loads nothing over the network.
   </footer>
 </div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<div id="importDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="importTitle" hidden>
+  <div class="dialog-panel">
+    <h2 id="importTitle">Import progress</h2>
+    <p id="importSummary"></p>
+    <p id="importError" class="dialog-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" id="mergeBtn" class="control primary">Merge</button>
+      <button type="button" id="replaceBtn" class="control danger">Replace</button>
+      <button type="button" id="cancelImport" class="control control-quiet">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="resetDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="resetTitle" hidden>
+  <div class="dialog-panel">
+    <h2 id="resetTitle">Reset progress?</h2>
+    <p id="resetSummary"></p>
+    <p class="dialog-note">This clears the saved checklist in this browser. Export first if you want a copy.</p>
+    <div class="dialog-actions">
+      <button type="button" id="confirmReset" class="control danger">Reset</button>
+      <button type="button" id="cancelReset" class="control control-quiet">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="app.js"></script>
 </body>
 </html>
