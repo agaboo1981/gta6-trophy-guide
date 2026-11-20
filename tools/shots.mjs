@@ -60,7 +60,7 @@ async function capture(shot) {
   if (Array.isArray(shot.seed)) {
     await send('Page.navigate', { url: new URL('/', base).toString() });
     await delay(450);
-    const payload = JSON.stringify({ v: 2, earned: shot.seed, counts: {} });
+    const payload = JSON.stringify({ v: 2, earned: shot.seed, counts: shot.counts || {} });
     await send('Runtime.evaluate', {
       expression: `localStorage.setItem('tideline55.v2', ${JSON.stringify(payload)})`,
     });
@@ -109,5 +109,10 @@ async function capture(shot) {
   unlinkSync(tmp);
 }
 
-for (const shot of shots) await capture(shot);
-console.log('shots: captured', shots.length, 'frames');
+const only = process.argv.slice(2);
+const selected = only.length ? shots.filter((shot) => only.includes(shot.file)) : shots;
+if (selected.length !== (only.length || shots.length)) {
+  throw new Error(`unknown shot file: ${only.filter((name) => !shots.some((shot) => shot.file === name)).join(', ')}`);
+}
+for (const shot of selected) await capture(shot);
+console.log('shots: captured', selected.length, 'frames');

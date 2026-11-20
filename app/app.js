@@ -154,6 +154,25 @@ function sourceName(n) {
   return sources[n] ? sources[n].name : `Source ${n}`;
 }
 
+function sourceDomain(n) {
+  const s = sources[n];
+  if (!s) return '';
+  if (!s.url) return 'in-game';
+  try {
+    return new URL(s.url).hostname.replace(/^www\./, '');
+  } catch (e) {
+    return String(s.url).replace(/^https?:\/\//, '').split('/')[0];
+  }
+}
+
+function compactClause(text) {
+  return String(text || '').split(/[;.]/)[0].replace(/\s+/g, ' ').trim();
+}
+
+function compactSave(text) {
+  return compactClause(String(text || '').replace(/^Manual save /i, ''));
+}
+
 function isHidden(t) {
   return spoiler && t.kind === 'story' && !earned.has(t.id);
 }
@@ -349,6 +368,21 @@ function renderNextUp() {
   els.nextup.title = isHidden(t) ? 'Next unearned trophy in roadmap order' : `Next unearned trophy: ${t.name}, lane ${stageFor(t).numeral}`;
 }
 
+function revealSelectedRow() {
+  const selectedTrophy = byId.get(selected);
+  if (!selectedTrophy || isHidden(selectedTrophy)) return;
+  const row = els.rows.querySelector(`.trow[data-id="${selected}"]`);
+  if (!row) return;
+  const listRect = els.rows.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const pad = 4;
+  if (rowRect.top >= listRect.top + pad && rowRect.bottom <= listRect.bottom - pad) return;
+  const index = [...els.rows.querySelectorAll('.trow')].indexOf(row);
+  const above = Math.min(2, Math.max(0, index));
+  const target = els.rows.scrollTop + (rowRect.top - listRect.top) - above * rowRect.height;
+  els.rows.scrollTop = Math.max(0, target);
+}
+
 function renderList() {
   const list = visibleTrophies();
   const frag = document.createDocumentFragment();
@@ -412,13 +446,15 @@ function renderList() {
     frag.append(empty);
   }
   els.rows.replaceChildren(frag);
+  revealSelectedRow();
   els.listcount.textContent = `${list.length} shown · ${done} earned · ${earned.size}/${TOTAL} total`;
   renderNextUp();
 }
 
 function citationSup(n) {
+  const s = sources[n];
   const sup = el('sup', 'cite', `[${n}]`);
-  sup.title = sources[n] ? `${sources[n].name} — ${sources[n].publisher}` : `Source ${n}`;
+  sup.title = s ? `${s.name} · ${sourceDomain(n)} · ${s.type}` : `Source ${n}`;
   return sup;
 }
 
@@ -584,7 +620,9 @@ function renderSourceRail() {
     item.append(el('span', 'refnum', `[${key}]`));
     const body = el('div');
     body.append(el('div', 'src-name', s.name));
-    body.append(el('div', 'src-meta', `${s.publisher} · ${s.type}`));
+    const meta = el('div', 'src-meta');
+    meta.append(el('span', 'src-host', sourceDomain(key)), el('span', 'src-role', s.type));
+    body.append(meta);
     item.append(body, el('span', 'src-cover', `${usage[key] ? usage[key].trophies : 0}/55`));
     frag.append(item);
   }
@@ -601,7 +639,8 @@ function renderRoadmap() {
     const laneTrophies = s.trophies.map((id) => byId.get(id)).filter(Boolean);
     const done = laneTrophies.filter((t) => earned.has(t.id)).length;
     const lane = el('div', 'lane' + (s.missables.length ? ' is-missable' : ''));
-    lane.append(el('span', 'lane-num', s.numeral));
+    const numeral = el('span', 'lane-num' + (s.numeral.length > 2 ? ' is-word' : ''), s.numeral);
+    lane.append(numeral);
     const body = el('div', 'lane-body');
     body.append(el('div', 'lane-name', s.name));
     const sub = el('div', 'lane-sub');
@@ -633,22 +672,44 @@ function renderRoadmap() {
   }
   els.tide.replaceChildren(frag);
 
-  const missFrag = document.createDocumentFragment();
-  missFrag.append(el('h2', null, 'Missable watch'));
-  missFrag.append(el('p', 'panel-sub', `${trophies.filter((t) => t.missable !== 'none').length} coral flags · status, window and save buoy`));
   const flagged = [...trophies]
     .filter((t) => t.missable !== 'none')
     .sort((a, b) => (stageOrder.get(a.stage) ?? 99) - (stageOrder.get(b.stage) ?? 99) || a.id - b.id);
-  for (const t of flagged) {
+  const statusCount = (s) => flagged.filter((t) => t.missable === s).length;
+  const missFrag = document.createDocumentFragment();
+  missFrag.append(el('h2', null, `${flagged.length} missable flags`));
+  const sub = el('p', 'panel-sub');
+  sub.append(el('b', null, `${statusCount('confirmed')} confirmed`));
+  sub.append(document.createTextNode(' / '));
+  sub.append(el('b', null, `${statusCount('possible')} possible`));
+  sub.append(document.createTextNode(' / '));
+  sub.append(el('b', null, `${statusCount('watch')} watch`));
+  missFrag.append(sub);
+  flagged.forEach((t, i) => {
+    const stage = stageFor(t);
+    const fullLocks = t.window ? t.window.locks : 'window not documented';
+    const fullSave = t.window ? t.window.save : 'save advice not documented';
+    const locks = compactClause(fullLocks);
+    const save = compactSave(fullSave);
     const b = el('button', 'missable-item');
     b.type = 'button';
-    b.append(el('span', 'mi-status', `${STATUS_LABEL[t.missable]} · ${stageFor(t).numeral}`));
-    b.append(el('span', 'mi-name', isHidden(t) ? 'Hidden story trophy' : t.name));
-    b.append(el('span', 'mi-window', t.window ? t.window.locks : 'window not documented'));
-    b.append(el('span', 'mi-save', t.window ? t.window.save : 'save advice not documented'));
+    b.title = `${STATUS_LABEL[t.missable]} · ${stage ? stage.name : 'window'}. Locks: ${fullLocks}. Save: ${fullSave}`;
+    const top = el('span', 'mi-top');
+    top.append(el('span', 'mi-rank', String(i + 1).padStart(2, '0')));
+    top.append(el('span', 'mi-status', t.missable.toUpperCase()));
+    top.append(el('span', 'mi-name', isHidden(t) ? 'Hidden story trophy' : t.name));
+    top.append(el('span', 'mi-lane', `closes ${stage ? stage.numeral : '—'}`));
+    b.append(top);
+    const path = el('span', 'mi-path');
+    const lock = el('span', 'mi-lock');
+    lock.append(el('b', null, 'Locks: '), document.createTextNode(locks));
+    const saveNode = el('span', 'mi-save');
+    saveNode.append(el('b', null, 'Save: '), document.createTextNode(save));
+    path.append(lock, el('span', 'mi-arrow', '→'), saveNode);
+    b.append(path);
     b.addEventListener('click', () => openTrophy(t.id, 'guide'));
     missFrag.append(b);
-  }
+  });
   els.missables.replaceChildren(missFrag);
 }
 
@@ -818,7 +879,9 @@ function renderGuideSpread() {
     row.append(el('span', 'refnum', `[${key}]`));
     const body = el('div');
     body.append(el('span', 's-name', s.name));
-    body.append(el('span', 's-meta', `${s.publisher} · read ${dateLabel(s.read)}`));
+    const meta = el('span', 's-meta');
+    meta.append(el('span', 'src-host', sourceDomain(key)), el('span', 'src-role', s.type));
+    body.append(meta);
     row.append(body, el('span', 's-cover', `${usage[key].trophies}/55`));
     sourceWrap.append(row);
   }

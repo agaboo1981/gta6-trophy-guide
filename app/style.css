@@ -715,6 +715,19 @@ main {
 .refnum { font: 700 12px/1.3 var(--mono); color: var(--kelp); }
 .src-name { font-size: 14px; line-height: 1.18; font-weight: 600; }
 .src-meta { font: 11px/1.2 var(--mono); color: #435B55; margin-top: 1px; }
+.src-host { font-weight: 700; color: var(--kelp); }
+.src-role {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 3px;
+  border: 1px solid #B9C9C2;
+  background: #F7FAF8;
+  color: #435B55;
+  font: 9px/1.4 var(--mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .src-cover { font: 11.5px/1.2 var(--mono); color: var(--ink); white-space: nowrap; text-align: right; }
 .rail-note {
   margin-top: 5px;
@@ -727,7 +740,7 @@ main {
 .rail-note b { color: var(--ink); }
 
 /* ---------- roadmap ---------- */
-.view-roadmap.is-active { grid-template-columns: minmax(0, 1fr) 300px; }
+.view-roadmap.is-active { grid-template-columns: minmax(0, 1fr) 328px; }
 .roadmap-main {
   min-height: 0;
   display: flex;
@@ -768,6 +781,7 @@ main {
   background: var(--coral);
 }
 .lane-num { font: 700 26px/1 var(--serif); color: var(--tide); text-align: right; }
+.lane-num.is-word { font: 700 12px/1 var(--mono); letter-spacing: 0.01em; }
 .lane-body { min-width: 0; }
 .lane-name {
   font: 700 16px/1.05 var(--serif);
@@ -828,7 +842,7 @@ main {
   background: #F6EFEC;
 }
 .missable-panel h2 {
-  font: 700 20px/1.05 var(--serif);
+  font: 700 21px/1.05 var(--serif);
   margin-bottom: 1px;
 }
 .missable-panel .panel-sub {
@@ -838,6 +852,7 @@ main {
   border-bottom: 1px solid #DCC9C2;
   padding-bottom: 3px;
 }
+.missable-panel .panel-sub b { color: #9F2F1F; }
 .missable-item {
   display: block;
   width: 100%;
@@ -845,20 +860,63 @@ main {
   border: 0;
   border-left: 3px solid var(--coral);
   background: transparent;
-  padding: 2px 0 2px 6px;
+  padding: 3px 0 3px 6px;
   margin-bottom: 2px;
 }
 .missable-item:hover { background: #F1DDD6; }
+.mi-top {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+.mi-rank {
+  flex: none;
+  font: 700 14px/1 var(--mono);
+  color: #9F2F1F;
+}
 .mi-status {
-  display: block;
-  font: 700 12px/1.2 var(--mono);
+  flex: none;
+  font: 700 9.5px/1.2 var(--mono);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #9F2F1F;
 }
-.mi-name { display: block; font: 600 15px/1.16 var(--sans); color: var(--ink); }
-.mi-window { display: block; font: 11.5px/1.18 var(--mono); color: #435B55; }
-.mi-save { display: block; font: italic 11.5px/1.2 var(--sans); color: #4A2520; }
+.mi-lane {
+  flex: none;
+  margin-left: auto;
+  padding-left: 4px;
+  font: 700 9px/1.2 var(--mono);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #435B55;
+  white-space: nowrap;
+}
+.mi-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 14px/1.16 var(--sans);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mi-path {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  margin-top: 1px;
+  font: 10px/1.18 var(--mono);
+  color: #435B55;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mi-path b { color: #6A3A31; }
+.mi-lock, .mi-save { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.mi-lock { flex: 1 1 52%; }
+.mi-save { flex: 1 1 48%; font-style: italic; color: #4A2520; }
+.mi-arrow { flex: none; color: var(--coral); font-weight: 700; }
 
 /* ---------- sources view ---------- */
 .view-sources.is-active {
@@ -1171,13 +1229,16 @@ main {
   .spread-lock { padding: 2px 7px; font-size: 12px; line-height: 1.15; }
   .spread-lock b { font-size: 11px; }
   .spread-lock p { margin: 0; font-size: 12px; line-height: 1.15; }
-  .spread-source .s-meta { display: none; }
   .spread-source { padding: 1px 0; font-size: 12px; line-height: 1.16; }
+  .spread-source .s-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spread-source .s-meta { display: block; font: 9px/1.15 var(--mono); margin-top: 1px; }
+  .spread-source .s-meta .src-role { margin-left: 3px; padding: 0 2px; font-size: 8px; }
   .missable-flag { padding-top: 3px; padding-bottom: 3px; }
   .missable-flag p { font-size: 13px; line-height: 1.2; }
   .steps-head { margin-top: 1px; margin-bottom: 1px; }
   .steps-foot { display: none; }
   .rail-note { display: none; }
+  .src-role { margin-left: 3px; padding: 0 2px; font-size: 8px; }
   .roadmap-head { display: flex; align-items: baseline; gap: 12px; padding-top: 3px; padding-bottom: 3px; }
   .section-title { font-size: 22px; }
   .section-sub { display: block; font-size: 13px; margin: 0; }
@@ -1193,11 +1254,19 @@ main {
   .tide-table { padding-bottom: 4px; }
   .trow-meta .hid, .trow-meta .refs { display: none; }
   .shield-banner { margin-left: -5px; margin-right: -5px; padding-left: 4px; padding-right: 4px; letter-spacing: 0; }
-  .missable-panel { padding-top: 5px; }
-  .missable-panel h2 { font-size: 18px; }
-  .mi-name { font-size: 14px; }
-  .mi-window { font-size: 10.5px; }
-  .mi-save { display: none; }
+  .missable-panel { padding: 3px 9px 0; }
+  .missable-panel h2 { font-size: 16px; }
+  .missable-panel .panel-sub { font-size: 10px; margin-bottom: 1px; padding-bottom: 1px; }
+  .missable-item { padding: 0; margin: 0; }
+  .mi-top { gap: 3px; font-size: 11px; }
+  .mi-rank { font-size: 12px; }
+  .mi-status { font-size: 9px; }
+  .mi-lane { font-size: 8.5px; }
+  .mi-name { font-size: 12px; line-height: 1; }
+  .mi-path { display: block; margin-top: 0; white-space: normal; font: 8.5px/1 var(--sans); }
+  .mi-lock, .mi-save { display: block; white-space: nowrap; }
+  .mi-arrow { display: none; }
+  .mi-save::before { content: "→ "; }
   .spread-left, .spread-right { padding: 6px 12px; }
   .spread-sources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .spread-foot { display: none; }
