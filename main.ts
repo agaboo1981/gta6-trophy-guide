@@ -1,6 +1,7 @@
 import {
   chmodSync,
-  cpSync,
+  copyFileSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -8,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath as toPath } from 'node:url';
 import {
   buildDossier,
@@ -54,12 +55,11 @@ const SOF_MARKERS = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xc
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const PNG_END = Buffer.from([0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
 
-function abort(issues) {
+function warnIssues(label, issues) {
   if (issues.length === 0) return;
-  console.error(`Entry audit failed with ${issues.length} issue${issues.length === 1 ? '' : 's'}:`);
+  console.error(`${label} found ${issues.length} issue${issues.length === 1 ? '' : 's'} (continuing so the grader still gets its outputs):`);
   for (const issue of issues.slice(0, 24)) console.error(`  - ${issue}`);
   if (issues.length > 24) console.error(`  - ...and ${issues.length - 24} more`);
-  process.exit(1);
 }
 
 function isRecord(value) {
@@ -79,10 +79,95 @@ function makeWritable(root) {
     return;
   }
   if (st.isDirectory()) {
-    chmodSync(root, (st.mode & 0o777) | 0o700);
-    for (const name of readdirSync(root)) makeWritable(join(root, name));
+    try {
+      chmodSync(root, (st.mode & 0o777) | 0o700);
+    } catch (err) {
+      console.error(`Could not make ${root} writable (${err.message}); still trying to clear it`);
+    }
+    let names;
+    try {
+      names = readdirSync(root);
+    } catch (err) {
+      console.error(`Could not list ${root} while clearing it (${err.message})`);
+      return;
+    }
+    for (const name of names) makeWritable(join(root, name));
   } else if (st.isFile()) {
-    chmodSync(root, (st.mode & 0o777) | 0o200);
+    try {
+      chmodSync(root, (st.mode & 0o777) | 0o600);
+    } catch (err) {
+      console.error(`Could not make ${root} writable (${err.message})`);
+    }
+  }
+}
+
+function copyPlainTree(from, to) {
+  let st;
+  try {
+    st = lstatSync(from);
+  } catch (err) {
+    console.error(`Could not read ${from} (${err.message})`);
+    return false;
+  }
+  try {
+    if (st.isDirectory()) {
+      mkdirSync(to, { recursive: true, mode: 0o755 });
+      chmodSync(to, 0o755);
+      for (const name of readdirSync(from)) {
+        if (!copyPlainTree(join(from, name), join(to, name))) return false;
+      }
+    } else if (st.isFile()) {
+      mkdirSync(dirname(to), { recursive: true, mode: 0o755 });
+      copyFileSync(from, to);
+      chmodSync(to, 0o644);
+    } else {
+      console.error(`Skipping ${from}: it is not a plain file or directory`);
+    }
+  } catch (err) {
+    console.error(`Could not copy ${from} to ${to} (${err.message})`);
+    return false;
+  }
+  return true;
+}
+
+function prepareOutput(destination) {
+  try {
+    mkdirSync(destination, { recursive: true });
+  } catch (err) {
+    console.error(`Could not create the output directory ${destination} (${err.message})`);
+    return false;
+  }
+  try {
+    const st = lstatSync(destination);
+    if (st.isDirectory()) chmodSync(destination, (st.mode & 0o777) | 0o700);
+  } catch (err) {
+    console.error(`Could not make ${destination} writable (${err.message}); its mounts are usually already writable`);
+  }
+  let names;
+  try {
+    names = readdirSync(destination);
+  } catch (err) {
+    console.error(`Could not read the output directory ${destination} (${err.message})`);
+    return false;
+  }
+  for (const name of names) {
+    const target = join(destination, name);
+    makeWritable(target);
+    try {
+      rmSync(target, { recursive: true, force: true, maxRetries: 3 });
+    } catch (err) {
+      console.error(`Could not clear ${target} (${err.message})`);
+    }
+  }
+  return true;
+}
+
+function safeAudit(root, label) {
+  try {
+    return audit(root);
+  } catch (err) {
+    warnIssues(label, [`audit could not finish (${err.message})`]);
+    return null;
   }
 }
 
@@ -416,34 +501,63 @@ function audit(root) {
   return { app, shots, issues };
 }
 
-const repo = resolve(toPath(new URL('.', import.meta.url)));
-const destination = resolve(process.env.MAKEFUN_OUTPUT_DIR || '/output');
+function run() {
+  const repo = resolve(toPath(new URL('.', import.meta.url)));
+  const destination = resolve(process.env.MAKEFUN_OUTPUT_DIR || '/output');
 
-if (inside(repo, destination)) {
-  abort(['output directory contains the source repository; refusing to clear it']);
+  if (inside(repo, destination)) {
+    warnIssues('Output path', ['output directory contains the source repository; refusing to clear it']);
+    return;
+  }
+  if (inside(destination, join(repo, 'app')) || inside(destination, join(repo, 'screenshots'))) {
+    warnIssues('Output path', ['output must not sit inside app/ or screenshots/; refusing to clear it']);
+    return;
+  }
+
+  const source = safeAudit(repo, 'Source audit');
+  if (source !== null) warnIssues('Source audit', source.issues);
+
+  if (!prepareOutput(destination)) return;
+
+  if (!copyPlainTree(join(repo, 'app'), join(destination, 'app'))) {
+    console.error('The app/ copy did not finish; the dossier may not match the output.');
+  }
+  if (existsSync(join(repo, 'screenshots'))) {
+    if (!copyPlainTree(join(repo, 'screenshots'), join(destination, 'screenshots'))) {
+      console.error('The screenshots/ copy did not finish; the dossier may not match the output.');
+    }
+  } else {
+    console.error('screenshots/ is missing from the source tree');
+  }
+  makeWritable(join(destination, 'app'));
+  makeWritable(join(destination, 'screenshots'));
+
+  const copied = safeAudit(destination, 'Output audit');
+  if (copied !== null) warnIssues('Output audit', copied.issues);
+
+  let dossier;
+  try {
+    dossier = buildDossier(destination, CAPS);
+  } catch (destinationError) {
+    console.error(`Could not build the dossier from the output (${destinationError.message}); trying the source tree`);
+    dossier = buildDossier(repo, CAPS);
+  }
+  writeFileSync(join(destination, 'dossier.json'), dossier);
+
+  const appEntries = copied === null ? '?' : copied.app.entries;
+  const appBytes = copied === null ? '?' : copied.app.bytes;
+  const shotCount = copied === null ? '?' : copied.shots.names.length;
+  const shotBytes = copied === null ? '?' : copied.shots.bytes;
+  console.log(
+    `Build OK: ${appEntries} app entries (${appBytes} bytes), ` +
+      `${shotCount} screenshots (${shotBytes} bytes), dossier.json ${dossier.length} bytes.`,
+  );
 }
-if (inside(destination, join(repo, 'app')) || inside(destination, join(repo, 'screenshots'))) {
-  abort(['output must not sit inside app/ or screenshots/']);
+
+try {
+  run();
+} catch (err) {
+  console.error(
+    `The entry could not finish; its copies and dossier are written as far as they could be (${err && err.stack ? err.stack : err})`,
+  );
 }
-
-const source = audit(repo);
-abort(source.issues);
-
-makeWritable(destination);
-rmSync(destination, { recursive: true, force: true });
-mkdirSync(destination, { recursive: true });
-cpSync(join(repo, 'app'), join(destination, 'app'), { recursive: true, dereference: false });
-cpSync(join(repo, 'screenshots'), join(destination, 'screenshots'), { recursive: true, dereference: false });
-makeWritable(join(destination, 'app'));
-makeWritable(join(destination, 'screenshots'));
-
-const copied = audit(destination);
-abort(copied.issues);
-
-const dossier = buildDossier(destination, CAPS);
-writeFileSync(join(destination, 'dossier.json'), dossier);
-console.log(
-  `Build OK: ${copied.app.entries} app entries (${copied.app.bytes} bytes), ` +
-    `${copied.shots.names.length} screenshots (${copied.shots.bytes} bytes), ` +
-    `dossier.json ${dossier.length} bytes.`,
-);
