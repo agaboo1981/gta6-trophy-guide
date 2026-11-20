@@ -116,6 +116,7 @@ const els = {
   sources: $('source-ledger'),
   spread: $('guide-spread'),
   shieldbanner: $('shieldbanner'),
+  shieldLegend: $('shieldLegend'),
   toast: $('toast'),
 };
 
@@ -184,7 +185,11 @@ function visibleTrophies() {
     if (kind !== 'all' && kind !== 'missable' && t.kind !== kind) return false;
     if (grade !== 'all' && t.grade !== grade) return false;
     if (!q) return true;
-    if (isHidden(t)) return 'hidden story trophy'.includes(q);
+    if (isHidden(t)) {
+      const stage = stageFor(t);
+      const sealed = ['hidden story trophy', 'sealed', 'shielded', stage ? stage.name : '', stage ? stage.numeral : '', gradeTitle(t.grade), t.kind];
+      return sealed.join(' ').toLowerCase().includes(q);
+    }
     const stage = stageFor(t);
     const hay = [t.name, t.description, t.guide, stage ? stage.name : '', t.kind, t.missable].join(' ').toLowerCase();
     return hay.includes(q);
@@ -291,6 +296,8 @@ function renderHeader() {
 
   els.spoiler.setAttribute('aria-pressed', String(spoiler));
   els.spoilerState.textContent = spoiler ? 'ON' : 'OFF';
+  els.spoiler.setAttribute('aria-label', `Spoiler shield ${spoiler ? 'ON' : 'OFF'}`);
+  els.shieldLegend.hidden = !spoiler;
   const showShield = spoiler && kind === 'story';
   els.shieldbanner.hidden = !showShield;
   els.shieldbanner.textContent = showShield ? 'SHIELD ON · HIDDEN' : '';
@@ -299,32 +306,32 @@ function renderHeader() {
 function renderEvidence() {
   const steps = trophies.reduce((n, t) => n + t.steps.length, 0);
   const citedSteps = trophies.reduce((n, t) => n + t.steps.filter((s) => s.cites && s.cites.length).length, 0);
-  const citedGuides = trophies.filter((t) => t.refs && t.refs.length).length;
   const hidden = trophies.filter((t) => t.hidden).length;
   const status = (s) => trophies.filter((t) => t.missable === s).length;
+  const missable = status('confirmed') + status('possible') + status('watch');
   const conflicts = trophies.filter((t) => t.conflict).length;
   const unconfirmed = trophies.filter((t) => t.unconfirmed).length;
-  const bits = [
-    ['55', 'official'],
-    ['1P 2G 6S 46B'],
-    [String(hidden), 'hidden'],
-    [`${citedGuides}/55`, 'guides'],
-    [`${citedSteps}/${steps}`, 'steps'],
-    [String(Object.keys(sources).length), 'sources'],
-    [`read ${dateLabel(meta.checked)}`],
-    [`${status('confirmed')}/${status('possible')}/${status('watch')}`, 'missable'],
-    [`${conflicts}`, 'conflicts'],
-    [`${unconfirmed}`, 'unconfirmed'],
+  const chips = [
+    { value: TOTAL, label: 'official', tone: '' },
+    { value: hidden, label: 'hidden', tone: 'kelp' },
+    { value: missable, label: `missable (${status('confirmed')}/${status('possible')}/${status('watch')})`, tone: 'coral' },
+    { value: citedSteps, label: steps === citedSteps ? 'steps cited' : `of ${steps} steps cited`, tone: 'kelp' },
+    { value: Object.keys(sources).length, label: 'sources', tone: '' },
+    { value: conflicts, label: 'conflicts', tone: 'coral' },
+    { value: unconfirmed, label: 'unconfirmed', tone: 'amber' },
   ];
   const frag = document.createDocumentFragment();
-  bits.forEach(([strong, weak], i) => {
-    if (i > 0) frag.append(el('span', 'ev-sep', '·'));
-    const bit = el('span');
-    bit.append(el('b', null, strong));
-    if (weak) bit.append(document.createTextNode(` ${weak}`));
-    frag.append(bit);
-  });
+  for (const chip of chips) {
+    const node = el('span', `ev-chip${chip.tone ? ` is-${chip.tone}` : ''}`);
+    node.append(el('b', null, String(chip.value)), el('span', 'ev-label', chip.label));
+    frag.append(node);
+  }
+  frag.append(el('span', 'ev-stamp', `read ${dateLabel(meta.checked)}`));
   els.evidence.replaceChildren(frag);
+  els.evidence.setAttribute(
+    'aria-label',
+    `Evidence: ${chips.map((c) => `${c.value} ${c.label}`).join(', ')}. Sources read ${dateLabel(meta.checked)}.`,
+  );
 }
 
 function chipCount(key) {
@@ -363,7 +370,7 @@ function renderNextUp() {
     els.nextup.textContent = 'All 55 earned — platinum lane closed.';
     return;
   }
-  const label = isHidden(t) ? 'Hidden story trophy' : t.name;
+  const label = isHidden(t) ? `Sealed story entry #${String(t.id).padStart(2, '0')}` : t.name;
   els.nextup.replaceChildren(el('b', null, 'Next'), document.createTextNode(` ${label} · ${stageFor(t).numeral}`));
   els.nextup.title = isHidden(t) ? 'Next unearned trophy in roadmap order' : `Next unearned trophy: ${t.name}, lane ${stageFor(t).numeral}`;
 }
@@ -385,23 +392,29 @@ function revealSelectedRow() {
 
 function renderList() {
   const list = visibleTrophies();
+  const shieldedStory = spoiler;
+  els.rows.classList.toggle('is-shielded-story', shieldedStory);
   const frag = document.createDocumentFragment();
   let done = 0;
   for (const t of list) {
     if (earned.has(t.id)) done++;
     const hidden = isHidden(t);
+    const revealed = shieldedStory && t.kind === 'story' && earned.has(t.id) && !hidden;
+    const stage = stageFor(t);
+    const sealedLabel = `Sealed story entry #${String(t.id).padStart(2, '0')}`;
     const li = el('li', 'trow');
     li.dataset.id = String(t.id);
     if (t.id === selected) li.classList.add('is-selected');
     if (t.missable !== 'none') li.classList.add('is-missable');
     if (earned.has(t.id)) li.classList.add('is-earned');
     if (hidden) li.classList.add('is-locked');
+    if (revealed) li.classList.add('is-revealed');
 
     const check = document.createElement('input');
     check.type = 'checkbox';
     check.className = 'trow-check';
     check.checked = earned.has(t.id);
-    check.setAttribute('aria-label', hidden ? 'Mark hidden story trophy earned' : `Mark ${t.name} earned`);
+    check.setAttribute('aria-label', hidden ? `Mark ${sealedLabel} earned` : `Mark ${t.name} earned`);
     check.addEventListener('change', () => toggleEarned(t.id, check.checked));
     check.addEventListener('click', (e) => e.stopPropagation());
 
@@ -412,13 +425,20 @@ function renderList() {
     const btn = el('button', 'trow-select');
     btn.type = 'button';
     btn.setAttribute('aria-pressed', String(t.id === selected));
-    const name = el('span', 'trow-name', hidden ? 'Hidden story trophy' : t.name);
+    const name = el('span', 'trow-name', hidden ? sealedLabel : t.name);
     const meta = el('span', 'trow-meta');
-    meta.append(el('span', 'kind', hidden ? 'story · shielded' : KIND_LABEL[t.kind] || t.kind));
-    meta.append(el('span', null, gradeTitle(t.grade)));
+    if (hidden) {
+      meta.append(el('span', 'lane-chip', stage ? `Lane ${stage.numeral}` : 'Lane —'));
+      meta.append(el('span', `grade-chip g-${t.grade}`, gradeTitle(t.grade)));
+      meta.append(el('span', 'kind', 'shielded'));
+    } else {
+      meta.append(el('span', 'kind', KIND_LABEL[t.kind] || t.kind));
+      meta.append(el('span', null, gradeTitle(t.grade)));
+    }
     if (t.count && !hidden) meta.append(el('span', null, `${getCount(t)}/${t.count.target} ${t.count.unit}`));
     if (t.missable !== 'none' && !hidden) meta.append(el('span', 'miss', t.missable === 'confirmed' ? 'confirmed missable' : t.missable === 'possible' ? 'possible missable' : 'watch'));
     if (earned.has(t.id)) meta.append(el('span', 'done', 'earned'));
+    if (revealed) meta.append(el('span', 'revealed', 'revealed'));
     if (t.hidden && !hidden) meta.append(el('span', 'hid', 'official hidden'));
     meta.append(el('span', 'refs', `cites ${t.refs.map((n) => `[${n}]`).join('')}`));
     btn.append(name, meta);
@@ -644,13 +664,17 @@ function renderRoadmap() {
     const body = el('div', 'lane-body');
     body.append(el('div', 'lane-name', s.name));
     const sub = el('div', 'lane-sub');
-    sub.append(el('span', 'why', s.why));
+    const why = el('span', 'why why-full', s.why);
+    const whyShort = el('span', 'why why-short', s.whyShort || compactClause(s.why));
+    why.title = s.why;
+    whyShort.title = s.why;
+    sub.append(why, whyShort);
     sub.append(el('span', 'save', s.save));
     body.append(sub);
     lane.append(body);
     const win = el('div', 'lane-window');
     win.append(document.createTextNode(s.window));
-    if (s.missables.length) win.append(el('div', null, `coral: ${s.missables.length} flagged`));
+    if (s.missables.length) win.append(el('div', 'lane-coral', `coral: ${s.missables.length} flagged`));
     lane.append(win);
     const count = el('div', 'lane-count');
     count.append(document.createTextNode(String(done)), el('span', 'of', ` / ${laneTrophies.length}`));

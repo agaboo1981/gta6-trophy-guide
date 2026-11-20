@@ -57,9 +57,8 @@
           <option value="bronze">Bronze</option>
         </select>
       </label>
-      <button type="button" id="spoilerToggle" class="control shield" aria-pressed="false" aria-describedby="spoilerHelp">
-        <span class="shield-label">Spoiler shield</span>
-        <strong id="spoilerState">OFF</strong>
+      <button type="button" id="spoilerToggle" class="control shield" aria-pressed="false" aria-describedby="spoilerHelp" title="Spoiler shield">
+        <span class="shield-label">Spoiler shield</span> <strong id="spoilerState">OFF</strong>
       </button>
       <p id="spoilerHelp" class="visually-hidden">When on, unearned story trophy names and descriptions are hidden until earned.</p>
       <button type="button" id="exportBtn" class="control">Export</button>
@@ -72,6 +71,12 @@
   </div>
 
   <div class="evidence" id="evidence-strip" aria-label="Evidence summary"></div>
+
+  <div class="shield-legend" id="shieldLegend" hidden>
+    <span class="shield-legend-tag">SPOILER SHIELD ON</span>
+    <span class="shield-legend-text">Unearned story names and descriptions stay hidden until earned.</span>
+    <span class="shield-legend-note">Earned stories revealed</span>
+  </div>
 
   <main id="main">
     <section id="view-checklist" class="view view-checklist" role="tabpanel" aria-labelledby="tab-checklist">
@@ -94,7 +99,7 @@
       <div class="roadmap-main">
         <div class="roadmap-head">
           <h2 class="section-title">Tide table</h2>
-          <p class="section-sub">Eight stages plus the platinum. Order, reason and save buoy are derived from the official descriptions and cited method notes.</p>
+          <p class="section-sub"><b>How the order was built.</b> Stages are grouped by what the official description asks; order, save buoys and flags come from the dated guides; every lane links to its source set.</p>
         </div>
         <div id="tide-table" class="tide-table" aria-label="Nine-lane platinum roadmap"></div>
       </div>

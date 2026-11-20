@@ -73,7 +73,8 @@
         2,
         3
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Mandatory opener; teaches every core system."
     },
     {
       "id": 2,
@@ -87,7 +88,8 @@
         8,
         10
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Required path; unlocks mission types used later."
     },
     {
       "id": 3,
@@ -102,7 +104,8 @@
         11,
         12
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Three mission trophies sit close together."
     },
     {
       "id": 4,
@@ -115,7 +118,8 @@
         6,
         13
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Ends on a set-piece; finish it in one sitting."
     },
     {
       "id": 5,
@@ -139,7 +143,8 @@
         24,
         26,
         27
-      ]
+      ],
+      "whyShort": "Clear flagged jobs before the finale."
     },
     {
       "id": 6,
@@ -179,7 +184,8 @@
         29,
         33,
         34
-      ]
+      ],
+      "whyShort": "Short one-offs; clear them between missions."
     },
     {
       "id": 7,
@@ -201,7 +207,8 @@
         43,
         54
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Big counts are faster with the whole map open."
     },
     {
       "id": 8,
@@ -213,7 +220,8 @@
       "trophies": [
         14
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "A Long Road is the capstone; finish 06 and 07 first."
     },
     {
       "id": 90,
@@ -225,7 +233,8 @@
       "trophies": [
         1
       ],
-      "missables": []
+      "missables": [],
+      "whyShort": "Vice Got a Price! needs the other 54 trophies."
     }
   ],
   "trophies": [
