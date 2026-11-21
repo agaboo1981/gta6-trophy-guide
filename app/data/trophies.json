@@ -1484,7 +1484,18 @@
         "unit": "strands",
         "increment": 1
       },
-      "conflict": "Sources disagree on whether the eight-strand count includes partner strands or only map stranger markers [2][4]."
+      "conflict": "Sources disagree on whether the eight-strand count includes partner strands or only map stranger markers [2][4].",
+      "conflictSides": [
+        {
+          "label": "PSNProfiles [2]",
+          "text": "The eight-strand count includes partner strands."
+        },
+        {
+          "label": "PowerPyx [4]",
+          "text": "The count covers map stranger markers only."
+        }
+      ],
+      "conflictCall": "Track the eight named strands, partners included, and check the in-game strand list before the finale."
     },
     {
       "id": 26,
@@ -1692,6 +1703,17 @@
         "save": "Manual save before a chapter finale if a spot remains"
       },
       "conflict": "PSNProfiles counts 18 meditation spots; a community map counts 15 [2][7].",
+      "conflictSides": [
+        {
+          "label": "PSNProfiles [2]",
+          "text": "18 meditation spots on the map."
+        },
+        {
+          "label": "GTA Wiki [7]",
+          "text": "Community map lists 15 spots."
+        }
+      ],
+      "conflictCall": "Use the in-game collectible screen; count 18 and treat the 15-spot map as incomplete.",
       "unconfirmed": "Whether the Chapter 1 balcony spot is required for the trophy is not confirmed by the official description [1][7]."
     },
     {
@@ -2413,7 +2435,18 @@
         "unit": "named areas",
         "increment": 1
       },
-      "conflict": "One tracker lists 52 named areas; the in-game map may group districts differently [2][7]."
+      "conflict": "One tracker lists 52 named areas; the in-game map may group districts differently [2][7].",
+      "conflictSides": [
+        {
+          "label": "PSNProfiles [2]",
+          "text": "52 named areas to discover."
+        },
+        {
+          "label": "GTA Wiki [7]",
+          "text": "The in-game map may group districts differently."
+        }
+      ],
+      "conflictCall": "Follow the in-game district list; 52 is a tracker count, not a guarantee."
     },
     {
       "id": 43,

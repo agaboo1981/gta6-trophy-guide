@@ -1,26 +1,15 @@
 import { meta, sources, stages, trophies } from './data/trophies.js';
 
 const KEY = 'tideline55.v2';
-const VIEWS = ['checklist', 'roadmap', 'sources', 'guide'];
+const VIEWS = ['checklist', 'roadmap', 'missables', 'sources', 'guide'];
 const TOTAL = trophies.length;
 const byId = new Map(trophies.map((t) => [t.id, t]));
 const stageById = new Map(stages.map((s) => [s.id, s]));
 const stageOrder = new Map(stages.map((s, i) => [s.id, i]));
 const gradeOrder = ['platinum', 'gold', 'silver', 'bronze'];
 
-const DEMO_ORDER = [
-  2, 3, 4, 8, 10, 5, 9, 11, 12, 6, 13,
-  22, 23, 24, 26, 27, 16, 20, 21, 28, 30, 31,
-  35, 36, 42, 44, 46, 15, 17, 18, 19, 25, 29,
-  32, 33, 34, 37, 38, 39, 40, 41, 43, 45, 47,
-  48, 49, 50, 51, 52, 53, 54, 55, 7, 14, 1,
-];
-
 const params = new URLSearchParams(location.search);
 const hashView = location.hash.replace(/^#/, '');
-const urlDemo = Number.parseInt(params.get('demo') || '', 10);
-const demoMode = Number.isInteger(urlDemo) && urlDemo > 0;
-const demoSize = demoMode ? Math.min(urlDemo, TOTAL) : 0;
 
 const KINDS = [
   { key: 'all', label: 'All' },
@@ -51,14 +40,9 @@ const stored = loadStored();
 let earned = new Set();
 let counts = {};
 
-if (demoMode) {
-  earned = new Set(DEMO_ORDER.slice(0, demoSize));
-  counts = demoSize >= 11 ? { 28: 6 } : {};
-} else {
-  earned = stored.earned;
-  counts = stored.counts;
-  storageBlocked = stored.blocked;
-}
+earned = stored.earned;
+counts = stored.counts;
+storageBlocked = stored.blocked;
 
 function loadStored() {
   try {
@@ -114,6 +98,8 @@ const els = {
   tide: $('tide-table'),
   missables: $('missable-flags'),
   sources: $('source-ledger'),
+  missablesView: $('missables-view'),
+  missableTabCount: $('missableTabCount'),
   spread: $('guide-spread'),
   shieldbanner: $('shieldbanner'),
   toast: $('toast'),
@@ -154,6 +140,23 @@ function sourceName(n) {
   return sources[n] ? sources[n].name : `Source ${n}`;
 }
 
+function sourceLabel(n) {
+  const s = sources[n];
+  if (!s) return `Source ${n}`;
+  return String(s.publisher || s.name).replace(/\s*\([^)]*\)\s*$/, '').trim() || `Source ${n}`;
+}
+
+function sourceDomain(n) {
+  const s = sources[n];
+  if (!s) return `source ${n}`;
+  if (!s.url) return 'PlayStation trophy app';
+  try {
+    return new URL(s.url).hostname.replace(/^www\./, '');
+  } catch (e) {
+    return String(s.url).replace(/^https?:\/\//, '').split('/')[0];
+  }
+}
+
 function isHidden(t) {
   return spoiler && t.kind === 'story' && !earned.has(t.id);
 }
@@ -189,10 +192,6 @@ function setSaved(text, state) {
 }
 
 function save() {
-  if (demoMode) {
-    setSaved('Sample progress · not saved', 'warn');
-    return;
-  }
   try {
     localStorage.setItem(KEY, JSON.stringify({ v: 2, earned: [...earned], counts }));
     storageBlocked = false;
@@ -212,7 +211,6 @@ function syncURL() {
     if (kind !== 'all') p.set('kind', kind);
     if (grade !== 'all') p.set('grade', grade);
     if (query) p.set('q', query);
-    if (demoMode) p.set('demo', String(demoSize));
     history.replaceState(null, '', `?${p.toString()}`);
   } catch (e) {
     /* file:// may refuse; the app still works */
@@ -266,15 +264,17 @@ function renderHeader() {
   els.sounder.replaceChildren(ticks);
   els.sounder.setAttribute('aria-label', `${earned.size} of 55 earned; ${trophies.filter((t) => t.missable !== 'none').length} coral missable marks; ${trophies.filter((t) => t.hidden).length} hollow hidden ticks`);
 
-  if (storageBlocked && !demoMode) setSaved('Storage blocked · progress will not persist', 'warn');
-  else if (demoMode) setSaved(`Sample progress · ${demoSize} of 55 · not saved`, 'warn');
+  if (storageBlocked) setSaved('Storage blocked · progress will not persist', 'warn');
   else setSaved('Saved in this browser', 'ok');
 
   els.spoiler.setAttribute('aria-pressed', String(spoiler));
   els.spoilerState.textContent = spoiler ? 'ON' : 'OFF';
   const showShield = spoiler && kind === 'story';
   els.shieldbanner.hidden = !showShield;
-  els.shieldbanner.textContent = showShield ? 'SHIELD ON · HIDDEN' : '';
+  els.shieldbanner.textContent = showShield ? 'SHIELD ON · unearned story names hidden' : '';
+  if (els.missableTabCount) {
+    els.missableTabCount.textContent = String(trophies.filter((t) => t.missable !== 'none').length);
+  }
 }
 
 function renderEvidence() {
@@ -282,29 +282,26 @@ function renderEvidence() {
   const citedSteps = trophies.reduce((n, t) => n + t.steps.filter((s) => s.cites && s.cites.length).length, 0);
   const citedGuides = trophies.filter((t) => t.refs && t.refs.length).length;
   const hidden = trophies.filter((t) => t.hidden).length;
-  const status = (s) => trophies.filter((t) => t.missable === s).length;
+  const missable = trophies.filter((t) => t.missable !== 'none').length;
   const conflicts = trophies.filter((t) => t.conflict).length;
   const unconfirmed = trophies.filter((t) => t.unconfirmed).length;
   const bits = [
-    ['55', 'official'],
-    ['1P 2G 6S 46B'],
-    [String(hidden), 'hidden'],
-    [`${citedGuides}/55`, 'guides'],
-    [`${citedSteps}/${steps}`, 'steps'],
-    [String(Object.keys(sources).length), 'sources'],
-    [`read ${dateLabel(meta.checked)}`],
-    [`${status('confirmed')}/${status('possible')}/${status('watch')}`, 'missable'],
-    [`${conflicts}`, 'conflicts'],
-    [`${unconfirmed}`, 'unconfirmed'],
+    ['55', 'official trophies', 'foam'],
+    [String(hidden), 'hidden', 'foam'],
+    [String(missable), 'missable', 'coral'],
+    [`${citedGuides}/55`, 'guides cited', 'kelp'],
+    [`${citedSteps}/${steps}`, 'steps cited', 'kelp'],
+    [String(Object.keys(sources).length), 'sources', 'foam'],
+    [String(conflicts), 'disputes', 'coral'],
+    [String(unconfirmed), 'unconfirmed', 'amber'],
+    [dateLabel(meta.checked), 'read', 'foam'],
   ];
   const frag = document.createDocumentFragment();
-  bits.forEach(([strong, weak], i) => {
-    if (i > 0) frag.append(el('span', 'ev-sep', '·'));
-    const bit = el('span');
-    bit.append(el('b', null, strong));
-    if (weak) bit.append(document.createTextNode(` ${weak}`));
-    frag.append(bit);
-  });
+  for (const [strong, weak, tone] of bits) {
+    const chip = el('span', `ev-chip ev-${tone}`);
+    chip.append(el('b', null, strong), el('span', 'ev-label', weak));
+    frag.append(chip);
+  }
   els.evidence.replaceChildren(frag);
 }
 
@@ -414,11 +411,29 @@ function renderList() {
   els.rows.replaceChildren(frag);
   els.listcount.textContent = `${list.length} shown · ${done} earned · ${earned.size}/${TOTAL} total`;
   renderNextUp();
+  const selectedRow = els.rows.querySelector('.trow.is-selected');
+  if (selectedRow) {
+    requestAnimationFrame(() => {
+      const list = els.rows.getBoundingClientRect();
+      const row = selectedRow.getBoundingClientRect();
+      const targetTop = list.top + list.height * 0.62;
+      els.rows.scrollTop += row.top - targetTop;
+      const listTop = els.rows.getBoundingClientRect().top;
+      for (const child of els.rows.children) {
+        const box = child.getBoundingClientRect();
+        if (box.top < listTop && box.bottom > listTop) {
+          els.rows.scrollTop += box.top - listTop;
+          break;
+        }
+      }
+    });
+  }
 }
 
 function citationSup(n) {
-  const sup = el('sup', 'cite', `[${n}]`);
-  sup.title = sources[n] ? `${sources[n].name} — ${sources[n].publisher}` : `Source ${n}`;
+  const sup = el('span', 'cite');
+  sup.append(el('span', 'cite-name', sourceLabel(n)), el('span', 'cite-num', `[${n}]`));
+  sup.title = sources[n] ? `${sources[n].name} — ${sourceDomain(n)}` : `Source ${n}`;
   return sup;
 }
 
@@ -468,14 +483,17 @@ function countRow(t, compact) {
   plus.setAttribute('aria-label', `Add one ${t.count.unit.replace(/s$/, '')} to ${t.name}`);
   plus.addEventListener('click', () => bumpCount(t.id, 1));
   row.append(minus, plus);
-  row.title = 'Sample progress is part of the demo state; normal use saves this count in this browser.';
+  row.title = 'This count is saved in this browser and is included in Export and Import.';
   return row;
 }
 
 function renderMissableFlag(t) {
   if (t.missable === 'none' || !t.window) return null;
   const box = el('div', 'missable-flag');
-  box.append(el('div', 'flag-head', `${STATUS_LABEL[t.missable]} · ${t.stage ? `Lane ${stageFor(t).numeral}` : 'window'}`));
+  box.append(el('div', 'flag-head', `${STATUS_LABEL[t.missable]} · Lane ${stageFor(t).numeral}`));
+  if (t.window.mission) {
+    box.append(el('div', 'flag-window', `${t.window.mission}${t.window.chapter ? ` · Chapter ${t.window.chapter}` : ''}`));
+  }
   const locks = el('p');
   locks.append(el('b', null, 'Locks: '), document.createTextNode(t.window.locks));
   const save = el('p', 'save');
@@ -519,7 +537,7 @@ function renderDetail() {
   }
 
   const official = el('div', 'official-block');
-  official.append(el('span', 'official-label', 'Official PlayStation description'));
+  official.append(el('span', 'official-label', 'Official PlayStation description · verbatim'));
   official.append(el('p', 'official-text', t.description));
   frag.append(official);
 
@@ -531,26 +549,107 @@ function renderDetail() {
   metaLine.append(el('span', null, `cites ${t.refs.map((n) => `[${n}]`).join('')}`));
   frag.append(metaLine);
 
-  const flag = renderMissableFlag(t);
-  if (flag) frag.append(flag);
-
-  if (t.count) frag.append(countRow(t, false));
+  const grid = el('div', 'detail-grid');
+  const main = el('div', 'detail-main');
+  const side = el('aside', 'detail-side');
 
   const headRow = el('div', 'steps-head');
   headRow.append(el('span', null, `Cited steps · ${Math.min(6, t.steps.length)} of ${t.steps.length}`));
-  headRow.append(el('b', null, `${t.steps.reduce((n, s) => n + (s.cites ? s.cites.length : 0), 0)} refs`));
-  frag.append(headRow);
-  renderSteps(t, 6, frag);
+  headRow.append(el('b', null, `${t.steps.reduce((n, s) => n + (s.cites ? s.cites.length : 0), 0)} source marks`));
+  main.append(headRow);
+  renderSteps(t, 6, main);
 
   const foot = el('div', 'steps-foot');
-  foot.append(el('span', null, t.steps.length > 6 ? `+${t.steps.length - 6} more in the logbook spread` : 'Every step carries a source'));
+  foot.append(el('span', null, t.steps.length > 6 ? `+${t.steps.length - 6} more in the logbook spread` : 'Every step carries a named source'));
   const open = el('button', 'link-btn', 'Open logbook spread →');
   open.type = 'button';
   open.addEventListener('click', () => setView('guide'));
   foot.append(open);
-  frag.append(foot);
+  main.append(foot);
+
+  const flag = renderMissableFlag(t);
+  if (flag) side.append(flag);
+  if (t.count) side.append(countRow(t, false));
+  const conflict = renderConflict(t);
+  if (conflict) side.append(conflict);
+  const next = renderNextPanel(t);
+  if (next) side.append(next);
+  if (spoiler && kind === 'story') side.append(renderShieldPanel());
+
+  grid.append(main, side);
+  frag.append(grid);
 
   els.detail.replaceChildren(frag);
+}
+
+function renderConflict(t) {
+  if (!t.conflict) return null;
+  const box = el('div', 'conflict-box');
+  box.append(el('h3', null, 'Sources disagree'));
+  if (Array.isArray(t.conflictSides) && t.conflictSides.length) {
+    for (const side of t.conflictSides) {
+      const row = el('div', 'conflict-side');
+      row.append(el('span', 'conflict-label', side.label));
+      row.append(el('span', 'conflict-text', side.text));
+      box.append(row);
+    }
+  } else {
+    box.append(el('p', null, t.conflict));
+  }
+  if (t.conflictCall) {
+    const call = el('p', 'conflict-call');
+    call.append(el('b', null, 'Our call: '), document.createTextNode(t.conflictCall));
+    box.append(call);
+  }
+  return box;
+}
+
+function renderShieldPanel() {
+  const story = trophies.filter((t) => t.kind === 'story');
+  const earnedStory = story.filter((t) => earned.has(t.id)).length;
+  const shielded = story.filter((t) => isHidden(t)).length;
+  const panel = el('div', 'shield-panel');
+  panel.append(el('h3', null, 'Spoiler shield is ON'));
+  panel.append(el('p', null, 'Earned story names stay visible. Unearned story names and descriptions show as “Hidden story trophy” until earned.'));
+  const stats = el('div', 'shield-stats');
+  stats.append(el('span', null, `${story.length} story`), el('span', null, `${earnedStory} earned`), el('span', null, `${shielded} shielded`));
+  panel.append(stats);
+  const off = el('button', 'link-btn', 'Turn the spoiler shield off');
+  off.type = 'button';
+  off.addEventListener('click', () => setSpoiler(false));
+  panel.append(off);
+  return panel;
+}
+
+function renderNextPanel(t) {
+  const sorted = [...trophies].sort((a, b) => (stageOrder.get(a.stage) ?? 99) - (stageOrder.get(b.stage) ?? 99) || a.id - b.id);
+  const index = sorted.findIndex((x) => x.id === t.id);
+  const upcoming = sorted.slice(index + 1).filter((x) => !earned.has(x.id)).slice(0, 3);
+  if (!upcoming.length) return null;
+  const panel = el('div', 'next-panel');
+  const head = el('div', 'next-head');
+  head.append(el('h3', null, 'Next in roadmap'));
+  const open = el('button', 'link-btn', 'Roadmap →');
+  open.type = 'button';
+  open.addEventListener('click', () => setView('roadmap'));
+  head.append(open);
+  panel.append(head);
+  for (const x of upcoming) {
+    const row = el('button', 'next-row');
+    row.type = 'button';
+    row.append(el('span', 'next-lane', stageFor(x).numeral));
+    const body = el('span', 'next-body');
+    body.append(el('span', 'next-name', isHidden(x) ? 'Hidden story trophy' : x.name));
+    const tags = el('span', 'next-tags');
+    tags.append(el('span', 'next-kind', KIND_LABEL[x.kind] || x.kind));
+    if (x.missable !== 'none') tags.append(el('span', 'next-miss', STATUS_LABEL[x.missable]));
+    if (x.count) tags.append(el('span', null, `${getCount(x)}/${x.count.target}`));
+    body.append(tags);
+    row.append(body);
+    row.addEventListener('click', () => selectTrophy(x.id));
+    panel.append(row);
+  }
+  return panel;
 }
 
 function sourceUsage() {
@@ -585,6 +684,7 @@ function renderSourceRail() {
     const body = el('div');
     body.append(el('div', 'src-name', s.name));
     body.append(el('div', 'src-meta', `${s.publisher} · ${s.type}`));
+    body.append(el('div', 'src-domain', sourceDomain(key)));
     item.append(body, el('span', 'src-cover', `${usage[key] ? usage[key].trophies : 0}/55`));
     frag.append(item);
   }
@@ -600,7 +700,7 @@ function renderRoadmap() {
   for (const s of stages) {
     const laneTrophies = s.trophies.map((id) => byId.get(id)).filter(Boolean);
     const done = laneTrophies.filter((t) => earned.has(t.id)).length;
-    const lane = el('div', 'lane' + (s.missables.length ? ' is-missable' : ''));
+    const lane = el('div', 'lane' + (s.missables.length ? ' is-missable' : '') + (s.id === 90 ? ' is-platinum' : ''));
     lane.append(el('span', 'lane-num', s.numeral));
     const body = el('div', 'lane-body');
     body.append(el('div', 'lane-name', s.name));
@@ -634,22 +734,63 @@ function renderRoadmap() {
   els.tide.replaceChildren(frag);
 
   const missFrag = document.createDocumentFragment();
-  missFrag.append(el('h2', null, 'Missable watch'));
-  missFrag.append(el('p', 'panel-sub', `${trophies.filter((t) => t.missable !== 'none').length} coral flags · status, window and save buoy`));
   const flagged = [...trophies]
     .filter((t) => t.missable !== 'none')
     .sort((a, b) => (stageOrder.get(a.stage) ?? 99) - (stageOrder.get(b.stage) ?? 99) || a.id - b.id);
+  const missCount = (status) => flagged.filter((t) => t.missable === status).length;
+  missFrag.append(el('h2', null, 'Missable watch'));
+  missFrag.append(el('p', 'panel-sub', `${flagged.length} flagged · ${missCount('confirmed')} confirmed · ${missCount('possible')} possible · ${missCount('watch')} watch`));
+  missFrag.append(el('p', 'panel-cite', 'Locks & save buoys: PowerPyx [4] · Push Square [6]'));
   for (const t of flagged) {
     const b = el('button', 'missable-item');
     b.type = 'button';
-    b.append(el('span', 'mi-status', `${STATUS_LABEL[t.missable]} · ${stageFor(t).numeral}`));
+    b.append(el('span', 'mi-status', `${STATUS_LABEL[t.missable]} · Lane ${stageFor(t).numeral}`));
     b.append(el('span', 'mi-name', isHidden(t) ? 'Hidden story trophy' : t.name));
-    b.append(el('span', 'mi-window', t.window ? t.window.locks : 'window not documented'));
-    b.append(el('span', 'mi-save', t.window ? t.window.save : 'save advice not documented'));
+    if (t.window) {
+      b.append(el('span', 'mi-window', `${t.window.mission} · locks: ${t.window.locks} · save: ${t.window.save}`));
+    }
+    b.title = t.window ? `${t.window.mission} — ${t.window.locks}. ${t.window.save}.` : 'Window not documented';
     b.addEventListener('click', () => openTrophy(t.id, 'guide'));
     missFrag.append(b);
   }
   els.missables.replaceChildren(missFrag);
+}
+
+function renderMissablesView() {
+  const flagged = [...trophies]
+    .filter((t) => t.missable !== 'none')
+    .sort((a, b) => (stageOrder.get(a.stage) ?? 99) - (stageOrder.get(b.stage) ?? 99) || a.id - b.id);
+  const missCount = (status) => flagged.filter((t) => t.missable === status).length;
+  const frag = document.createDocumentFragment();
+  const head = el('div', 'ledger-head');
+  const left = el('div');
+  left.append(el('h2', 'ledger-title', 'Missable watch'));
+  left.append(el('p', 'ledger-sub', `${flagged.length} flagged · ${missCount('confirmed')} confirmed · ${missCount('possible')} possible · ${missCount('watch')} watch. Ordered by roadmap lane, then official list id; locks and save buoys come from cited guides [4][6].`));
+  const right = el('div');
+  right.append(el('div', 'rail-date', `${flagged.length} watched · read ${dateLabel(meta.checked)}`));
+  head.append(left, right);
+  frag.append(head);
+
+  const list = el('div', 'missables-table');
+  for (const t of flagged) {
+    const row = el('button', 'missable-row');
+    row.type = 'button';
+    row.append(el('span', `mr-status mr-${t.missable}`, STATUS_LABEL[t.missable]));
+    row.append(el('span', 'mr-lane', `Lane ${stageFor(t).numeral}`));
+    const body = el('span', 'mr-body');
+    body.append(el('span', 'mr-name', isHidden(t) ? 'Hidden story trophy' : t.name));
+    if (t.window) body.append(el('span', 'mr-window', `${t.window.mission} · Chapter ${t.window.chapter}`));
+    row.append(body);
+    if (t.window) {
+      row.append(el('span', 'mr-locks', `Locks: ${t.window.locks}`));
+      row.append(el('span', 'mr-save', `Save: ${t.window.save}`));
+    }
+    row.append(el('span', 'mr-refs', t.refs.map((n) => `[${n}]`).join(' ')));
+    row.addEventListener('click', () => openTrophy(t.id, 'checklist'));
+    list.append(row);
+  }
+  frag.append(list);
+  els.missablesView.replaceChildren(frag);
 }
 
 function renderSourcesView() {
@@ -784,7 +925,7 @@ function renderGuideSpread() {
 
   // right page: official text, method prose, and the source rail
   const railHead = el('div', 'rail-head');
-  railHead.append(el('h2', 'rail-title', 'Claims & sources'), el('span', 'rail-date', `read ${dateLabel(meta.checked)}`));
+  railHead.append(el('h2', 'rail-title', 'Claims & notes'), el('span', 'rail-date', `read ${dateLabel(meta.checked)}`));
   right.append(railHead);
 
   const official = el('div', 'spread-official');
@@ -802,14 +943,16 @@ function renderGuideSpread() {
 
   if (t.count) right.append(countRow(t, true));
 
-  if (t.conflict) {
-    const c = el('div', 'claim-block');
-    c.append(el('h3', null, 'Sources disagree'));
-    c.append(el('p', null, t.conflict));
-    right.append(c);
+  const conflict = renderConflict(t);
+  if (conflict) {
+    conflict.classList.add('is-spread');
+    right.append(conflict);
   }
 
   const usage = sourceUsage();
+  const sourceHead = el('div', 'rail-head spread-source-head');
+  sourceHead.append(el('h2', 'rail-title', 'Sources for this guide'), el('span', 'rail-date', `read ${dateLabel(meta.checked)}`));
+  left.append(sourceHead);
   const sourceWrap = el('div', 'spread-sources');
   for (const key of Object.keys(sources).sort((a, b) => Number(a) - Number(b))) {
     const s = sources[key];
@@ -818,11 +961,11 @@ function renderGuideSpread() {
     row.append(el('span', 'refnum', `[${key}]`));
     const body = el('div');
     body.append(el('span', 's-name', s.name));
-    body.append(el('span', 's-meta', `${s.publisher} · read ${dateLabel(s.read)}`));
+    body.append(el('span', 's-meta', `${s.publisher} · ${sourceDomain(key)} · read ${dateLabel(s.read)}`));
     row.append(body, el('span', 's-cover', `${usage[key].trophies}/55`));
     sourceWrap.append(row);
   }
-  right.append(sourceWrap);
+  left.append(sourceWrap);
 
   if (t.unconfirmed) {
     const u = el('div', 'claim-block is-unconfirmed');
@@ -839,6 +982,11 @@ function renderGuideSpread() {
   ev.append(el('b', null, `${citedTotal}/${stepTotal}`), document.createTextNode(' steps cited · '));
   ev.append(el('b', null, String(Object.keys(sources).length)), document.createTextNode(` sources · read ${dateLabel(meta.checked)}`));
   right.append(ev);
+  const next = renderNextPanel(t);
+  if (next) {
+    next.classList.add('is-spread');
+    right.append(next);
+  }
   right.append(el('p', 'spread-foot', 'Official text is quoted verbatim and attributed; guide prose and step order are this entry’s own. The app fetches nothing.'));
 
   frag.append(left, right);
@@ -855,6 +1003,8 @@ function renderAll() {
     renderSourceRail();
   } else if (view === 'roadmap') {
     renderRoadmap();
+  } else if (view === 'missables') {
+    renderMissablesView();
   } else if (view === 'sources') {
     renderSourcesView();
   } else if (view === 'guide') {
@@ -1094,6 +1244,6 @@ window.addEventListener('hashchange', () => {
 
 // initial paint
 setView(view);
-if (storageBlocked && !demoMode) {
+if (storageBlocked) {
   showToast('Storage is blocked in this browser; progress will not persist. Export still works.', true);
 }

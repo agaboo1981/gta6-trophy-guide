@@ -16,7 +16,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function capture(shot) {
   const width = shot.viewport?.width || 1280;
-  const height = shot.viewport?.height || 480;
+  const height = shot.viewport?.height || 800;
   const url = new URL(shot.path || '/', base).toString();
   const target = await fetch(`${cdp}/json/new?${encodeURIComponent(url)}`, { method: 'PUT' }).then((r) => r.json());
   const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -60,7 +60,7 @@ async function capture(shot) {
   if (Array.isArray(shot.seed)) {
     await send('Page.navigate', { url: new URL('/', base).toString() });
     await delay(450);
-    const payload = JSON.stringify({ v: 2, earned: shot.seed, counts: {} });
+    const payload = JSON.stringify({ v: 2, earned: shot.seed, counts: shot.counts || {} });
     await send('Runtime.evaluate', {
       expression: `localStorage.setItem('tideline55.v2', ${JSON.stringify(payload)})`,
     });

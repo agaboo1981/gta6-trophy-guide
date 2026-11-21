@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-keeps="saved progress, filters, spoiler shield, export, import">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -39,6 +39,7 @@
     <nav class="tabs" role="tablist" aria-label="Guide views">
       <button type="button" class="tab" role="tab" id="tab-checklist" aria-controls="view-checklist" aria-selected="true" data-view="checklist">Checklist</button>
       <button type="button" class="tab" role="tab" id="tab-roadmap" aria-controls="view-roadmap" aria-selected="false" tabindex="-1" data-view="roadmap">Roadmap</button>
+      <button type="button" class="tab" role="tab" id="tab-missables" aria-controls="view-missables" aria-selected="false" tabindex="-1" data-view="missables">Missables <span class="tab-count" id="missableTabCount">9</span></button>
       <button type="button" class="tab" role="tab" id="tab-sources" aria-controls="view-sources" aria-selected="false" tabindex="-1" data-view="sources">Sources</button>
       <button type="button" class="tab" role="tab" id="tab-guide" aria-controls="view-guide" aria-selected="false" tabindex="-1" data-view="guide">Guide</button>
     </nav>
@@ -94,11 +95,15 @@
       <div class="roadmap-main">
         <div class="roadmap-head">
           <h2 class="section-title">Tide table</h2>
-          <p class="section-sub">Eight stages plus the platinum. Order, reason and save buoy are derived from the official descriptions and cited method notes.</p>
+          <p class="section-sub">Lane order follows the official mission and chapter wording first, then cited method guides (PowerPyx [4], Push Square [6]) for save buoys and missable windows.</p>
         </div>
         <div id="tide-table" class="tide-table" aria-label="Nine-lane platinum roadmap"></div>
       </div>
       <aside id="missable-flags" class="missable-panel" aria-label="Missable watch"></aside>
+    </section>
+
+    <section id="view-missables" class="view view-missables" role="tabpanel" aria-labelledby="tab-missables">
+      <div id="missables-view" class="missables-view"></div>
     </section>
 
     <section id="view-sources" class="view view-sources" role="tabpanel" aria-labelledby="tab-sources">
